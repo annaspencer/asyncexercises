@@ -28,7 +28,7 @@ async function numFacts2() {
 numFacts2()
 
 //3.)
-async function part3() {
+async function numFacts3() {
     let facts = await Promise.all(
       Array.from({ length: 4 }, () => $.getJSON("http://numbersapi.com/7?json"))
     );
@@ -36,7 +36,7 @@ async function part3() {
       $('#demo3').append(`<p>${data.text}</p>`);
     });
   }
-  part3();
+  numFacts3();
 
 // ~~~~~~~~~~~~~~~~~~Part2~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
 $(function() {
@@ -48,7 +48,8 @@ $(function() {
       let { suit, value } = data.cards[0];
       console.log(`${value.toLowerCase()} of ${suit.toLowerCase()}`);
     }
-  
+ 
+    part1()
     // 2.
     async function part2() {
       let firstCardData = await $.getJSON(`${baseURL}/new/draw/`);
@@ -59,7 +60,7 @@ $(function() {
         console.log(`${value.toLowerCase()} of ${suit.toLowerCase()}`);
       });
     }
-  
+    part2()
     // 3.
     async function setup() {
       let $btn = $('button');
@@ -68,21 +69,68 @@ $(function() {
       let deckData = await $.getJSON(`${baseURL}/new/shuffle/`);
       $btn.show().on('click', async function() {
         let cardData = await $.getJSON(`${baseURL}/${deckData.deck_id}/draw/`);
-        let cardSrc = cardData.cards[0].image;
-        let angle = Math.random() * 90 - 45;
-        let randomX = Math.random() * 40 - 20;
-        let randomY = Math.random() * 40 - 20;
+        let card = cardData.cards[0].image;
         $cardArea.append(
           $('<img>', {
-            src: cardSrc,
-            css: {
-              transform: `translate(${randomX}px, ${randomY}px) rotate(${angle}deg)`
-            }
+            src: card,
           })
         );
-        if (cardData.remaining === 0) $btn.remove();
       });
     }
     setup();
   });
   
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Part 3~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+  $(function() {
+    let baseURL = "https://pokeapi.co/api/v2";
+  
+    // 1.
+    async function getPokemon() {
+      let data = await $.getJSON(`${baseURL}/pokemon/?limit=1000`);
+      console.log(data);
+    }
+    getPokemon()
+    // 2.
+    async function getRandomPokemon() {
+      let allData = await $.getJSON(`${baseURL}/pokemon/?limit=1000`);
+      let randomPokemonUrls = [];
+      for (let i = 0; i < 3; i++) {
+        let randomIdx = Math.floor(Math.random() * allData.results.length);
+        let url = allData.results.splice(randomIdx, 1)[0].url;
+        randomPokemonUrls.push(url);
+      }
+      let pokemonData = await Promise.all(
+        randomPokemonUrls.map(url => $.getJSON(url))
+      );
+      pokemonData.forEach(p => console.log(p));
+    }
+    getRandomPokemon()
+    // 3.
+    async function pokemonParallel() {
+      let allData = await $.getJSON(`${baseURL}/pokemon/?limit=1000`);
+      let randomPokemonUrls = [];
+      for (let i = 0; i < 3; i++) {
+        let randomIdx = Math.floor(Math.random() * allData.results.length);
+        let url = allData.results.splice(randomIdx, 1)[0].url;
+        randomPokemonUrls.push(url);
+      }
+      let pokemonData = await Promise.all(
+        randomPokemonUrls.map(url => $.getJSON(url))
+      );
+      let speciesData = await Promise.all(
+        pokemonData.map(p => $.getJSON(p.species.url))
+      );
+      descriptions = speciesData.map(d => {
+        let descriptionObj = d.flavor_text_entries.find(
+          entry => entry.language.name === "en"
+        );
+        return descriptionObj
+          ? descriptionObj.flavor_text
+          : "No description available.";
+      });
+      descriptions.forEach((desc, i) => {
+        console.log(`${pokemonData[i].name}: ${desc}`);
+      });
+    }
+    pokemonParallel()
+    });
